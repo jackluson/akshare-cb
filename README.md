@@ -4,6 +4,8 @@
 
 TypeScript/Node.js 可转债数据接口库。用 TypeScript 重写了 Python [akshare](https://github.com/akfamily/akshare) 库中的可转债相关接口，提供 **17 个函数**，覆盖 **5 个数据源**。
 
+> [雪球网数据增强助手，专为可转债投资者服务](https://anchor-data.cn/snowball-enhanced)
+
 ## 安装
 
 ```bash
@@ -41,8 +43,10 @@ console.log(thsData[0]);
 
 ```bash
 pnpm docs
-# 然后在编辑器中查看 docs/ 目录下的 Markdown 文件
+# 然后查看 docs/ 目录下的 Markdown 文件
 ```
+
+[查看 API 文档 →](./docs/globals.md)
 
 ### 函数概览
 

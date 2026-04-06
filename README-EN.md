@@ -4,6 +4,8 @@
 
 TypeScript/Node.js library for Chinese convertible bond (可转债) data. Re-implements the convertible bond interfaces from the Python [akshare](https://github.com/akfamily/akshare) library, providing **17 functions** across **5 data sources**.
 
+> [Snowball Enhanced — Xueqiu data enhancement tool for convertible bond investors](https://anchor-data.cn/snowball-enhanced)
+
 ## Installation
 
 ```bash
@@ -41,8 +43,10 @@ To generate the docs locally:
 
 ```bash
 pnpm docs
-# Then open docs/index.html in your browser
+# Then view the Markdown files under docs/
 ```
+
+[View API Docs →](./docs/globals.md)
 
 ### Function Overview
 
