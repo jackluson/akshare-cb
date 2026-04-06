@@ -17,6 +17,13 @@ import { fetchPaginatedData } from "../utils/pagination";
 
 const DATACENTER_URL = "https://datacenter-web.eastmoney.com/api/data/v1/get";
 
+const BOND_QUOTE_COLUMNS =
+  "f2~01~CONVERT_STOCK_CODE~CONVERT_STOCK_PRICE," +
+  "f235~10~SECURITY_CODE~TRANSFER_PRICE,f236~10~SECURITY_CODE~TRANSFER_VALUE," +
+  "f2~10~SECURITY_CODE~CURRENT_BOND_PRICE,f237~10~SECURITY_CODE~TRANSFER_PREMIUM_RATIO," +
+  "f239~10~SECURITY_CODE~RESALE_TRIG_PRICE,f240~10~SECURITY_CODE~REDEEM_TRIG_PRICE," +
+  "f23~01~CONVERT_STOCK_CODE~PBV_RATIO";
+
 /**
  * 东方财富-可转债列表
  * Returns the full list of convertible bonds from East Money Data Center.
@@ -32,7 +39,10 @@ const DATACENTER_URL = "https://datacenter-web.eastmoney.com/api/data/v1/get";
  * console.log(bonds[0].bondCode); // "127100"
  * ```
  */
-export async function bondZhCov(isSurvive: boolean = false, delay?: number): Promise<BondZhCovRecord[]> {
+export async function bondZhCov(
+  isSurvive: boolean = false,
+  delay?: number,
+): Promise<BondZhCovRecord[]> {
   const params = {
     sortColumns: "PUBLIC_START_DATE",
     sortTypes: "-1",
@@ -40,19 +50,14 @@ export async function bondZhCov(isSurvive: boolean = false, delay?: number): Pro
     pageNumber: "1",
     reportName: "RPT_BOND_CB_LIST",
     columns: "ALL",
-    quoteColumns:
-      "f2~01~CONVERT_STOCK_CODE~CONVERT_STOCK_PRICE," +
-      "f235~10~SECURITY_CODE~TRANSFER_PRICE,f236~10~SECURITY_CODE~TRANSFER_VALUE," +
-      "f2~10~SECURITY_CODE~CURRENT_BOND_PRICE,f237~10~SECURITY_CODE~TRANSFER_PREMIUM_RATIO," +
-      "f239~10~SECURITY_CODE~RESALE_TRIG_PRICE,f240~10~SECURITY_CODE~REDEEM_TRIG_PRICE," +
-      "f23~01~CONVERT_STOCK_CODE~PBV_RATIO",
+    quoteColumns: BOND_QUOTE_COLUMNS,
     source: "WEB",
     client: "WEB",
   };
 
   // Fetch page 1 to get total pages
   const firstPage = await fetchJson<Record<string, unknown>>(DATACENTER_URL, {
-    params: { ...params, pageNumber: "1" },
+    params,
   });
 
   const result = firstPage.result as Record<string, unknown> | undefined;
@@ -78,13 +83,24 @@ export async function bondZhCov(isSurvive: boolean = false, delay?: number): Pro
   }
 
   const bonds = allData.map(mapBondZhCovRecord);
-  if (isSurvive) {
-    const nowStart = new Date().setHours(0, 0, 0, 0); // 求当天时间的开始时间
-    const validBonds = bonds.filter(item => item.listingDate && item.convertPrice && item.bondPrice && item.convertValue && item.bondCode.startsWith('1') && (!item.recordDateSh || nowStart <= new Date(item.recordDateSh).getTime() - 3 * 24 * 60 * 60 * 1000) && (!item.transferEndDate || nowStart <= new Date(item.transferEndDate).getTime() - 3 * 24 * 60 * 60 * 1000));
-    return validBonds
-  } else {
-    return bonds
-  }
+  if (!isSurvive) return bonds;
+
+  const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
+  const todayStart = new Date().setHours(0, 0, 0, 0);
+
+  return bonds.filter((item) => {
+    if (!item.listingDate || !item.convertPrice || !item.bondPrice || !item.convertValue)
+      return false;
+    if (!item.bondCode.startsWith("1")) return false;
+    if (item.recordDateSh && todayStart > new Date(item.recordDateSh).getTime() - THREE_DAYS_MS)
+      return false;
+    if (
+      item.transferEndDate &&
+      todayStart > new Date(item.transferEndDate).getTime() - THREE_DAYS_MS
+    )
+      return false;
+    return true;
+  });
 }
 
 function mapBondZhCovRecord(raw: Record<string, unknown>): BondZhCovRecord {
@@ -115,8 +131,6 @@ function mapBondZhCovRecord(raw: Record<string, unknown>): BondZhCovRecord {
     transferEndDate: parseDate(raw.TRANSFER_END_DATE),
   };
 }
-
-
 
 /**
  * 东方财富-可转债比价表
@@ -294,6 +308,14 @@ function mapValueAnalysis(raw: Record<string, unknown>): BondCovValueAnalysisRec
 
 const MARKET_TYPE: Record<string, string> = { sh: "1", sz: "0" };
 
+function parseSecid(symbol: string): string | null {
+  const prefix = symbol.slice(0, 2).toLowerCase();
+  const code = symbol.slice(2);
+  const marketType = MARKET_TYPE[prefix];
+  if (!marketType) return null;
+  return `${marketType}.${code}`;
+}
+
 /**
  * 东方财富-可转债分钟行情
  * Returns intraday minute-level market data for a convertible bond.
@@ -323,26 +345,22 @@ export async function bondZhHsCovMin(
   startDate: string = "1979-09-01 09:32:00",
   endDate: string = "2222-01-01 09:32:00",
 ): Promise<BondCovMinRecord[]> {
-  const prefix = symbol.slice(0, 2).toLowerCase();
-  const code = symbol.slice(2);
-  const marketType = MARKET_TYPE[prefix];
-  if (!marketType) return [];
-
-  const secid = `${marketType}.${code}`;
+  const secid = parseSecid(symbol);
+  if (!secid) return [];
 
   if (period === "1") {
-    return fetchMinTrends(secid);
+    return fetchMinTrends(secid, "0");
   }
   return fetchMinKline(secid, period, adjust, startDate, endDate);
 }
 
-async function fetchMinTrends(secid: string): Promise<BondCovMinRecord[]> {
+async function fetchMinTrends(secid: string, iscr: string): Promise<BondCovMinRecord[]> {
   const url = "https://push2.eastmoney.com/api/qt/stock/trends2/get";
   const params = {
     secid,
     fields1: "f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f11,f12,f13",
     fields2: "f51,f52,f53,f54,f55,f56,f57,f58",
-    iscr: "0",
+    iscr,
     iscca: "0",
     ut: "f057cbcbce2a86e2866ab8877db1d059",
     ndays: "1",
@@ -432,25 +450,7 @@ function parseMinKline(line: string): BondCovMinRecord {
  * ```
  */
 export async function bondZhHsCovPreMin(symbol: string): Promise<BondCovMinRecord[]> {
-  const prefix = symbol.slice(0, 2).toLowerCase();
-  const code = symbol.slice(2);
-  const marketType = MARKET_TYPE[prefix];
-  if (!marketType) return [];
-
-  const url = "https://push2.eastmoney.com/api/qt/stock/trends2/get";
-  const params = {
-    secid: `${marketType}.${code}`,
-    fields1: "f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f11,f12,f13",
-    fields2: "f51,f52,f53,f54,f55,f56,f57,f58",
-    iscr: "1",
-    iscca: "0",
-    ut: "f057cbcbce2a86e2866ab8877db1d059",
-    ndays: "1",
-  };
-
-  const data = await fetchJson<Record<string, unknown>>(url, { params });
-  const result = data.data as Record<string, unknown> | undefined;
-  if (!result?.trends) return [];
-
-  return (result.trends as string[]).map(parseMinTrendLine);
+  const secid = parseSecid(symbol);
+  if (!secid) return [];
+  return fetchMinTrends(secid, "1");
 }

@@ -1,12 +1,4 @@
-import { fetchJson } from "./http.js";
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function randomInRange(min: number, max: number): number {
-  return min + Math.random() * (max - min);
-}
+import { fetchJson, randomInRange, sleep } from "./http.js";
 
 /**
  * Fetch paginated data from East Money APIs.

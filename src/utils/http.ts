@@ -34,11 +34,11 @@ function buildUrl(baseUrl: string, params?: Record<string, string>): string {
   return url.toString();
 }
 
-function randomInRange(min: number, max: number): number {
+export function randomInRange(min: number, max: number): number {
   return min + Math.random() * (max - min);
 }
 
-function sleep(ms: number): Promise<void> {
+export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
@@ -87,8 +87,12 @@ export async function requestWithRetry(
       }
 
       if (!response.ok) {
-        lastError = new NetworkError(`HTTP ${response.status}`, response.status);
-        continue;
+        // Only retry server errors (5xx); client errors (4xx) are permanent
+        if (response.status >= 500) {
+          lastError = new NetworkError(`HTTP ${response.status}`, response.status);
+          continue;
+        }
+        throw new NetworkError(`HTTP ${response.status}`, response.status);
       }
 
       return response;

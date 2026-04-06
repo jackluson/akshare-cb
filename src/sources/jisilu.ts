@@ -30,6 +30,23 @@ const REDEEM_ICON_MAP: Record<string, RedeemStatus> = {
   "": "",
 };
 
+const JSL_BASE_HEADERS: Record<string, string> = {
+  Accept: "application/json, text/javascript, */*; q=0.01",
+  "Accept-Encoding": "gzip, deflate, br",
+  "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+  "Cache-Control": "no-cache",
+  "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+  Origin: "https://www.jisilu.cn",
+  Pragma: "no-cache",
+  Referer: "https://www.jisilu.cn/data/cbnew/",
+  "Sec-Fetch-Dest": "empty",
+  "Sec-Fetch-Mode": "cors",
+  "Sec-Fetch-Site": "same-origin",
+  "User-Agent":
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+  "X-Requested-With": "XMLHttpRequest",
+};
+
 /**
  * 集思录-可转债等权指数
  * Returns the Jisilu convertible bond equal-weight index history (raw column-based format).
@@ -100,25 +117,7 @@ export async function bondCbIndexJslWithList(): Promise<BondCbIndexJslRecord[]> 
  * ```
  */
 export async function bondCbJsl(cookie: string): Promise<BondCbJslRecord[]> {
-  const headers = {
-    accept: "application/json, text/javascript, */*; q=0.01",
-    "accept-encoding": "gzip, deflate, br",
-    "accept-language": "zh-CN,zh;q=0.9,en;q=0.8",
-    "cache-control": "no-cache",
-    "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
-    cookie,
-    origin: "https://www.jisilu.cn",
-    pragma: "no-cache",
-    referer: "https://www.jisilu.cn/data/cbnew/",
-    "sec-ch-ua": '" Not;A Brand";v="99", "Google Chrome";v="91", "Chromium";v="91"',
-    "sec-ch-ua-mobile": "?0",
-    "sec-fetch-dest": "empty",
-    "sec-fetch-mode": "cors",
-    "sec-fetch-site": "same-origin",
-    "user-agent":
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.164 Safari/537.36",
-    "x-requested-with": "XMLHttpRequest",
-  };
+  const headers = { ...JSL_BASE_HEADERS, cookie };
 
   const params = {
     ___jsl: `LST___t=${Date.now()}`,
@@ -231,37 +230,15 @@ function mapJslRecord(cell: JslRawCell): BondCbJslRecord {
  * ```
  */
 export async function bondCbRedeemJsl(): Promise<BondCbRedeemJslRecord[]> {
-  const headers = {
-    Accept: "application/json, text/javascript, */*; q=0.01",
-    "Accept-Encoding": "gzip, deflate, br",
-    "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
-    "Cache-Control": "no-cache",
-    Connection: "keep-alive",
-    "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-    Host: "www.jisilu.cn",
-    Origin: "https://www.jisilu.cn",
-    Pragma: "no-cache",
-    Referer: "https://www.jisilu.cn/data/cbnew/",
-    "sec-ch-ua": '" Not A;Brand";v="99", "Chromium";v="101", "Google Chrome";v="101"',
-    "sec-ch-ua-mobile": "?0",
-    "sec-ch-ua-platform": '"Windows"',
-    "Sec-Fetch-Dest": "empty",
-    "Sec-Fetch-Mode": "cors",
-    "Sec-Fetch-Site": "same-origin",
-    "User-Agent":
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.67 Safari/537.36",
-    "X-Requested-With": "XMLHttpRequest",
-  };
-
   const params = {
-    ___jsl: "LST___t=1653394005966",
+    ___jsl: `LST___t=${Date.now()}`,
   };
 
   const payload = { rp: "50" };
 
   const text = await fetchText(REDEEM_URL, {
     method: "POST",
-    headers,
+    headers: JSL_BASE_HEADERS,
     params,
     body: JSON.stringify(payload),
   });
@@ -298,8 +275,6 @@ interface JslRedeemRawCell {
 }
 
 function mapRedeemRecord(cell: JslRedeemRawCell): BondCbRedeemJslRecord {
-  // Strip '%' from trigger ratio before converting to number
-  const ratioStr = String(cell.redeem_price_ratio ?? "").replace(/%/g, "");
   // Map redeem_icon to Chinese status text
   const iconKey = String(cell.redeem_icon ?? "");
   const redeemStatus: RedeemStatus = REDEEM_ICON_MAP[iconKey] ?? "";
@@ -316,7 +291,7 @@ function mapRedeemRecord(cell: JslRedeemRawCell): BondCbRedeemJslRecord {
     lastTradeDate: parseDate(cell.delist_dt),
     maturityDate: parseDate(cell.maturity_dt),
     convertPrice: toNumeric(cell.convert_price),
-    redeemTriggerRatio: toNumeric(ratioStr),
+    redeemTriggerRatio: toNumeric(cell.redeem_price_ratio),
     redeemTriggerPrice: toNumeric(cell.force_redeem_price),
     stockPrice: toNumeric(cell.sprice),
     redeemPrice: toNumeric(cell.real_force_redeem_price),
