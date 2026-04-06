@@ -1,0 +1,50 @@
+{
+  "name": "akshare-cb",
+  "version": "0.1.0",
+  "description": "TypeScript/Node.js library for Chinese convertible bond data",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check src __tests__",
+    "lint:fix": "biome check --write src __tests__",
+    "format": "biome format --write src __tests__",
+    "docs": "typedoc",
+    "check": "pnpm run typecheck && pnpm run lint && pnpm run test"
+  },
+  "keywords": [
+    "convertible-bond",
+    "finance",
+    "akshare",
+    "china"
+  ],
+  "license": "MIT",
+  "packageManager": "pnpm@10.11.0",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.0.0",
+    "@types/node": "^22.0.0",
+    "typedoc": "^0.28.18",
+    "typedoc-plugin-markdown": "^4.11.0",
+    "typescript": "^5.8.0",
+    "vitest": "^3.0.0"
+  },
+  "dependencies": {
+    "cheerio": "^1.0.0"
+  }
+}
