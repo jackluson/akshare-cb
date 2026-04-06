@@ -1,6 +1,6 @@
 {
   "name": "akshare-cb",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "TypeScript/Node.js library for Chinese convertible bond data",
   "type": "module",
   "main": "./dist/index.js",

@@ -46,7 +46,7 @@ pnpm docs
 # 然后查看 docs/ 目录下的 Markdown 文件
 ```
 
-[查看 API 文档 →](./docs/globals.md)
+[查看 API 文档 →](https://github.com/jackluson/akshare-cb/blob/main/docs/globals.md)
 
 ### 函数概览
 
