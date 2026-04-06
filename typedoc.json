@@ -11,6 +11,8 @@
   "excludeInternal": true,
   "categorizeByGroup": true,
   "searchInComments": true,
-  // "plugin": ["typedoc-plugin-markdown"],
-  // "theme": "markdown"
+  "plugin": [
+    "typedoc-plugin-markdown"
+  ],
+  "theme": "markdown"
 }
