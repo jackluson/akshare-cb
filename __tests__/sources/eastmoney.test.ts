@@ -149,20 +149,21 @@ describe("bondCovComparison", () => {
         f14: "南银转债",
         f2: 112.5,
         f3: 0.45,
-        f234: "601009",
-        f236: "南京银行",
-        f231: 9.82,
-        f232: -0.31,
-        f237: 10.0,
-        f238: 98.2,
-        f239: 14.56,
-        f240: 42.13,
-        f241: 80.0,
-        f242: 130.0,
-        f26: 108.5,
-        f229: 79.15,
-        f243: "2021-03-01",
-        f227: "2021-03-15",
+        f232: "601009",
+        f234: "南京银行",
+        f227: 79.15,
+        f229: 9.82,
+        f230: -0.31,
+        f235: 10.0,
+        f236: 98.2,
+        f237: 14.56,
+        f238: 42.13,
+        f239: 80.0,
+        f240: 130.0,
+        f241: 108.5,
+        f26: "2021-03-15",
+        f242: "2021-03-01",
+        f243: "2021-02-15",
       },
       {
         f1: 2,
@@ -170,20 +171,21 @@ describe("bondCovComparison", () => {
         f14: "牧原转债",
         f2: 135.8,
         f3: -1.22,
-        f234: "002714",
-        f236: "牧原股份",
-        f231: 42.55,
-        f232: 0.88,
-        f237: 40.0,
-        f238: 106.38,
-        f239: 27.65,
-        f240: 60.22,
-        f241: 85.0,
-        f242: 140.0,
-        f26: 105.0,
-        f229: 84.8,
-        f243: "2021-09-01",
-        f227: "2021-09-10",
+        f232: "002714",
+        f234: "牧原股份",
+        f227: 84.8,
+        f229: 42.55,
+        f230: 0.88,
+        f235: 40.0,
+        f236: 106.38,
+        f237: 27.65,
+        f238: 60.22,
+        f239: 85.0,
+        f240: 140.0,
+        f241: 105.0,
+        f26: "2021-09-10",
+        f242: "2021-09-01",
+        f243: "2021-08-16",
       },
     ];
 
@@ -210,20 +212,21 @@ describe("bondCovComparison", () => {
         f14: "南银转债",
         f2: 112.5,
         f3: 0.45,
-        f234: "601009",
-        f236: "南京银行",
-        f231: 9.82,
-        f232: -0.31,
-        f237: 10.0,
-        f238: 98.2,
-        f239: 14.56,
-        f240: 42.13,
-        f241: 80.0,
-        f242: 130.0,
-        f26: 108.5,
-        f229: 79.15,
-        f243: "2021-03-01",
-        f227: "2021-03-15",
+        f232: "601009",
+        f234: "南京银行",
+        f227: 79.15,
+        f229: 9.82,
+        f230: -0.31,
+        f235: 10.0,
+        f236: 98.2,
+        f237: 14.56,
+        f238: 42.13,
+        f239: 80.0,
+        f240: 130.0,
+        f241: 108.5,
+        f26: "2021-03-15",
+        f242: "2021-03-01",
+        f243: "2021-02-15",
       },
     ];
 
@@ -240,6 +243,7 @@ describe("bondCovComparison", () => {
     expect(result).toHaveLength(1);
 
     const record = result[0];
+    console.log("record", record);
     expect(record.index).toBe(1);
     expect(record.bondCode).toBe("113050");
     expect(record.bondName).toBe("南银转债");
@@ -252,12 +256,13 @@ describe("bondCovComparison", () => {
     expect(record.convertPrice).toBe(10.0);
     expect(record.convertValue).toBe(98.2);
     expect(record.convertPremiumRate).toBe(14.56);
-    expect(record.bondPremiumRate).toBe(42.13);
+    expect(record.bondPurePremiumRate).toBe(42.13);
     expect(record.resaleTriggerPrice).toBe(80.0);
     expect(record.redeemTriggerPrice).toBe(130.0);
     expect(record.maturityRedeemPrice).toBe(108.5);
     expect(record.pureBondValue).toBe(79.15);
     expect(record.convertStartDate).toBe("2021-03-01");
+    expect(record.issueStartDate).toBe("2021-02-15");
     expect(record.listingDate).toBe("2021-03-15");
     expect(record.subscribeDate).toBeNull();
   });
