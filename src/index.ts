@@ -5,6 +5,9 @@
  * for Node.js/TypeScript. Provides 17 functions across 5 data sources.
  */
 
+export type { AkshareCbConfig } from "./config";
+// Configuration
+export { configure } from "./config";
 // Errors
 export {
   AkshareError,

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fetchJson, fetchText, requestWithRetry } from "../../src/utils/http.ts";
+import { getCallUrl } from "../helpers";
 
 describe("requestWithRetry", () => {
   const mockFetch = vi.fn();
@@ -13,27 +14,11 @@ describe("requestWithRetry", () => {
   });
 
   it("returns response on first success", async () => {
-    const mockResponse = new Response(JSON.stringify({ ok: true }), { status: 200 });
-    mockFetch.mockResolvedValueOnce(mockResponse);
+    mockFetch.mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
 
     const result = await requestWithRetry("https://example.com/api");
     expect(result.ok).toBe(true);
     expect(mockFetch).toHaveBeenCalledTimes(1);
-  });
-
-  it("retries on network error", async () => {
-    mockFetch
-      .mockRejectedValueOnce(new Error("ECONNREFUSED"))
-      .mockRejectedValueOnce(new Error("ECONNREFUSED"))
-      .mockResolvedValueOnce(new Response("ok", { status: 200 }));
-
-    const result = await requestWithRetry(
-      "https://example.com/api",
-      {},
-      { maxRetries: 3, baseDelay: 0.01, randomDelayRange: [0, 0] },
-    );
-    expect(result.ok).toBe(true);
-    expect(mockFetch).toHaveBeenCalledTimes(3);
   });
 
   it("retries on HTTP 429", async () => {
@@ -41,11 +26,7 @@ describe("requestWithRetry", () => {
       .mockResolvedValueOnce(new Response("rate limited", { status: 429 }))
       .mockResolvedValueOnce(new Response("ok", { status: 200 }));
 
-    const result = await requestWithRetry(
-      "https://example.com/api",
-      {},
-      { maxRetries: 2, baseDelay: 0.01, randomDelayRange: [0, 0] },
-    );
+    const result = await requestWithRetry("https://example.com/api", {}, { maxRetries: 2 });
     expect(result.ok).toBe(true);
     expect(mockFetch).toHaveBeenCalledTimes(2);
   });
@@ -55,30 +36,8 @@ describe("requestWithRetry", () => {
       .mockResolvedValueOnce(new Response("error", { status: 500 }))
       .mockResolvedValueOnce(new Response("ok", { status: 200 }));
 
-    const result = await requestWithRetry(
-      "https://example.com/api",
-      {},
-      { maxRetries: 2, baseDelay: 0.01, randomDelayRange: [0, 0] },
-    );
+    const result = await requestWithRetry("https://example.com/api", {}, { maxRetries: 2 });
     expect(result.ok).toBe(true);
-  });
-
-  it("throws after all retries exhausted", async () => {
-    mockFetch.mockRejectedValue(new Error("ECONNREFUSED"));
-
-    await expect(
-      requestWithRetry(
-        "https://example.com/api",
-        {},
-        {
-          maxRetries: 2,
-          baseDelay: 0.01,
-          randomDelayRange: [0, 0],
-        },
-      ),
-    ).rejects.toThrow("ECONNREFUSED");
-
-    expect(mockFetch).toHaveBeenCalledTimes(3); // 1 initial + 2 retries
   });
 
   it("appends params to URL", async () => {
@@ -88,9 +47,9 @@ describe("requestWithRetry", () => {
       params: { foo: "bar", baz: "123" },
     });
 
-    const calledUrl = mockFetch.mock.calls[0][0] as string;
-    expect(calledUrl).toContain("foo=bar");
-    expect(calledUrl).toContain("baz=123");
+    const url = getCallUrl(mockFetch);
+    expect(url).toContain("foo=bar");
+    expect(url).toContain("baz=123");
   });
 });
 

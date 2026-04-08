@@ -5,11 +5,10 @@
  */
 import { createCipheriv } from "node:crypto";
 import type { BondCovIssueCninfoRecord, BondCovStockIssueCninfoRecord } from "../types/cninfo";
+import { CNINFO } from "../urls";
 import { formatFlexDate, parseDate } from "../utils/date";
 import { fetchJson } from "../utils/http";
 import { toNumeric } from "../utils/numeric";
-
-const CNINFO_BASE = "http://webapi.cninfo.com.cn";
 
 /**
  * Generate AES-128-CBC encrypted token for cninfo API authentication.
@@ -75,7 +74,7 @@ export async function bondCovIssueCninfo(
   startDate: string,
   endDate: string,
 ): Promise<BondCovIssueCninfoRecord[]> {
-  const url = `${CNINFO_BASE}/api/sysapi/p_sysapi1123`;
+  const url = CNINFO.ISSUE;
   const params = {
     sdate: formatFlexDate(startDate),
     edate: formatFlexDate(endDate),
@@ -105,7 +104,7 @@ export async function bondCovIssueCninfo(
  * ```
  */
 export async function bondCovStockIssueCninfo(): Promise<BondCovStockIssueCninfoRecord[]> {
-  const url = `${CNINFO_BASE}/api/sysapi/p_sysapi1124`;
+  const url = CNINFO.STOCK_ISSUE;
 
   const data = await fetchJson<CninfoResponse>(url, {
     method: "POST",

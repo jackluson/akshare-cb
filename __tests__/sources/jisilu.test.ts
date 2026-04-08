@@ -5,6 +5,7 @@ import {
   bondCbJsl,
   bondCbRedeemJsl,
 } from "../../src/sources/jisilu.ts";
+import { getCallHeaders } from "../helpers";
 
 // ---------------------------------------------------------------------------
 // bondCbIndexJsl
@@ -105,8 +106,7 @@ describe("bondCbJsl", () => {
 
     // Verify cookie was passed in the fetch call headers
     expect(mockFetch).toHaveBeenCalledTimes(1);
-    const fetchOptions = mockFetch.mock.calls[0][1] as RequestInit;
-    const headers = fetchOptions.headers as Record<string, string>;
+    const headers = getCallHeaders(mockFetch);
     expect(headers.cookie).toBe(cookie);
 
     // Verify 22 fields mapped correctly
@@ -138,7 +138,7 @@ describe("bondCbJsl", () => {
 
     // Confirm all fields are present
     const fieldCount = Object.keys(r).length;
-    expect(fieldCount).toBe(23);
+    expect(fieldCount).toBe(24);
   });
 });
 

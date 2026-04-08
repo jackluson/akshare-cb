@@ -11,21 +11,13 @@ import type {
   BondCovDailyRecord,
   BondCovSpotRecord,
 } from "../types/sina";
+import { SINA } from "../urls";
 import { parseDate } from "../utils/date";
 import { parseHtmlTableAsKVPairs, parseHtmlTableAsRecords } from "../utils/html-table";
 import { fetchText } from "../utils/http";
 import { runJsFunction } from "../utils/js-runner";
 import { lenientJsonParse } from "../utils/lenient-json";
 import { toNumeric } from "../utils/numeric";
-
-const SPOT_COUNT_URL =
-  "http://vip.stock.finance.sina.com.cn/quotes_service/api/json_v2.php/Market_Center.getHQNodeStockCountSimple";
-const SPOT_DATA_URL =
-  "http://vip.stock.finance.sina.com.cn/quotes_service/api/json_v2.php/Market_Center.getHQNodeDataSimple";
-const HIST_URL =
-  "https://finance.sina.com.cn/realstock/company/{symbol}/hisdata/klc_kl.js?d={date}";
-const PROFILE_URL = "https://money.finance.sina.com.cn/bond/info/{symbol}.html";
-const SUMMARY_URL = "https://money.finance.sina.com.cn/bond/quotes/{symbol}.html";
 
 /**
  * 新浪财经-债券-沪深可转债实时行情
@@ -57,7 +49,7 @@ export async function bondZhHsCovSpot(): Promise<BondCovSpotRecord[]> {
       _s_r_a: "page",
     };
 
-    const text = await fetchText(SPOT_DATA_URL, { params });
+    const text = await fetchText(SINA.SPOT_DATA, { params });
     const pageData = lenientJsonParse<BondCovSpotRecord[]>(text);
     if (Array.isArray(pageData)) {
       allRecords.push(...pageData);
@@ -72,7 +64,7 @@ export async function bondZhHsCovSpot(): Promise<BondCovSpotRecord[]> {
  * Fetches the total count from the count endpoint and divides by 80.
  */
 async function getPageCount(): Promise<number> {
-  const text = await fetchText(SPOT_COUNT_URL, {
+  const text = await fetchText(SINA.SPOT_COUNT, {
     params: { node: "hskzz_z" },
   });
   const match = text.match(/\d+/);
@@ -101,7 +93,7 @@ async function getPageCount(): Promise<number> {
 export async function bondZhHsCovDaily(symbol: string): Promise<BondCovDailyRecord[]> {
   const now = new Date();
   const dateStr = `${now.getFullYear()}_${String(now.getMonth() + 1).padStart(2, "0")}_${String(now.getDate()).padStart(2, "0")}`;
-  const url = HIST_URL.replace("{symbol}", symbol).replace("{date}", dateStr);
+  const url = SINA.HIST.replace("{symbol}", symbol).replace("{date}", dateStr);
 
   const text = await fetchText(url);
 
@@ -152,7 +144,7 @@ function mapDailyRecord(raw: Record<string, unknown>): BondCovDailyRecord {
  * ```
  */
 export async function bondCbProfileSina(symbol: string): Promise<BondCbProfileItem[]> {
-  const url = PROFILE_URL.replace("{symbol}", symbol);
+  const url = SINA.PROFILE.replace("{symbol}", symbol);
   const html = await fetchText(url);
 
   // Parse the first HTML table as records, then map to item/value pairs
@@ -185,7 +177,7 @@ export async function bondCbProfileSina(symbol: string): Promise<BondCbProfileIt
  * ```
  */
 export async function bondCbSummarySina(symbol: string): Promise<BondCbSummaryItem[]> {
-  const url = SUMMARY_URL.replace("{symbol}", symbol);
+  const url = SINA.SUMMARY.replace("{symbol}", symbol);
   const html = await fetchText(url);
 
   // The 11th table (index 10) has 6 columns forming 3 key-value pairs per row

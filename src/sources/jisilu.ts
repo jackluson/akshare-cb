@@ -184,6 +184,7 @@ interface JslRawCell {
   turnover_rt?: unknown;
   ytm_rt?: unknown;
   dblow?: unknown;
+  list_dt?: string;
 }
 
 function mapJslRecord(cell: JslRawCell): BondCbJslRecord {
@@ -211,6 +212,7 @@ function mapJslRecord(cell: JslRawCell): BondCbJslRecord {
     turnoverRate: toNumeric(cell.turnover_rt),
     ytm: toNumeric(cell.ytm_rt),
     doubleLow: toNumeric(cell.dblow),
+    listDt: parseDate(cell.list_dt),
   };
 }
 

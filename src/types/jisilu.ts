@@ -114,6 +114,8 @@ export interface BondCbJslRecord {
   ytm: number | null;
   /** 双低 */
   doubleLow: number | null;
+  /** 上市日期 */
+  listDt: string | null;
 }
 
 /** 强赎状态枚举 */

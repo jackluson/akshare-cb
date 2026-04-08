@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
 import {
   bondCbProfileSina,
   bondCbSummarySina,
   bondZhHsCovDaily,
   bondZhHsCovSpot,
 } from "../../src/sources/sina.ts";
+import { getCallUrl } from "../helpers";
 
 // ---------------------------------------------------------------------------
 // bondZhHsCovSpot
@@ -79,17 +79,17 @@ describe("bondZhHsCovSpot", () => {
     expect(mockFetch).toHaveBeenCalledTimes(3);
 
     // Verify count URL was called
-    const countCallUrl = mockFetch.mock.calls[0][0] as string;
+    const countCallUrl = getCallUrl(mockFetch, 0);
     expect(countCallUrl).toContain("getHQNodeStockCountSimple");
 
     // Verify page 1 data URL
-    const page1CallUrl = mockFetch.mock.calls[1][0] as string;
+    const page1CallUrl = getCallUrl(mockFetch, 1);
     expect(page1CallUrl).toContain("getHQNodeDataSimple");
     expect(page1CallUrl).toContain("page=1");
     expect(page1CallUrl).toContain("num=80");
 
     // Verify page 2 data URL
-    const page2CallUrl = mockFetch.mock.calls[2][0] as string;
+    const page2CallUrl = getCallUrl(mockFetch, 2);
     expect(page2CallUrl).toContain("page=2");
     expect(page2CallUrl).toContain("num=80");
 
@@ -163,7 +163,7 @@ describe("bondZhHsCovDaily", () => {
       // Expected to fail since hk_js_decode.js doesn't exist in test env
     }
 
-    const calledUrl = mockFetch.mock.calls[0][0] as string;
+    const calledUrl = getCallUrl(mockFetch);
     expect(calledUrl).toContain("sz128039");
     expect(calledUrl).toContain("hisdata/klc_kl.js");
   });
@@ -209,7 +209,7 @@ describe("bondCbProfileSina", () => {
     const result = await bondCbProfileSina("sz128039");
 
     // URL should contain the symbol
-    const calledUrl = mockFetch.mock.calls[0][0] as string;
+    const calledUrl = getCallUrl(mockFetch);
     expect(calledUrl).toContain("sz128039");
 
     // Should return {item, value} pairs parsed from the first table
@@ -275,7 +275,7 @@ describe("bondCbSummarySina", () => {
     const result = await bondCbSummarySina("sh155255");
 
     // URL should contain the symbol
-    const calledUrl = mockFetch.mock.calls[0][0] as string;
+    const calledUrl = getCallUrl(mockFetch);
     expect(calledUrl).toContain("sh155255");
 
     // Should parse KV pairs from the 11th table

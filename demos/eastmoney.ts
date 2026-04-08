@@ -5,6 +5,8 @@
  * 运行: npx tsx demos/eastmoney.ts
  */
 import { writeFileSync } from "fs";
+import UserAgent from "user-agents";
+import { configure } from "../src/config";
 import {
   bondCovComparison,
   bondCovValueAnalysis,
@@ -12,7 +14,37 @@ import {
   bondZhCovInfo,
   bondZhHsCovMin,
   bondZhHsCovPreMin,
-} from "../src/sources/eastmoney";
+} from "../src/index";
+
+// 配置随机 User-Agent + hooks 打印请求/响应头
+const ua = new UserAgent();
+configure({
+  headers: { "User-Agent": ua.toString() },
+  hooks: {
+    beforeRequest: [
+      ({ request, options }) => {
+        console.log("options", options);
+        console.log("request", request);
+        console.log(`→ ${options.method} ${request.url}`);
+        request.headers.forEach((value, key) => {
+          console.log(`  ${key}: ${value}`);
+        });
+      },
+    ],
+    afterResponse: [
+      ({ response }) => {
+        console.log("response", response);
+        console.log(`← ${response.status} ${response.url}`);
+        return response;
+      },
+      ({ request, options, response }) => {
+        console.log("request, options", request, options);
+        return response;
+      },
+    ],
+  },
+});
+console.log(`User-Agent: ${ua.toString()}\n`);
 
 const SEP = "\n" + "=".repeat(60) + "\n";
 
@@ -27,63 +59,64 @@ function printTable(title: string, data: unknown[], limit = 3) {
 
 async function main() {
   // 1. 可转债列表
-  // console.log(SEP + "测试 bondZhCov() — 可转债列表");
-  // try {
-  //   const bonds = await bondZhCov(true);
-  //   // const csv = validBonds.map(item => Object.values(item).join(",")).join("\n");
-  //   // writeFileSync("validBonds.csv", csv);
-  //   // 导出 validBonds 到 json
-  //   // const json = JSON.stringify(validBonds);
-  //   // writeFileSync("validBonds.json", json);
-  //   printTable("可转债列表", bonds, 5);
-  // } catch (e) {
-  //   console.error("bondZhCov 失败:", e);
-  // }
+  console.log(SEP + "测试 bondZhCov() — 可转债列表");
+  try {
+    const bonds = await bondZhCov(true);
+    // const csv = validBonds.map(item => Object.values(item).join(",")).join("\n");
+    // writeFileSync("validBonds.csv", csv);
+    // 导出 validBonds 到 json
+    // const json = JSON.stringify(validBonds);
+    // writeFileSync("validBonds.json", json);
+    printTable("可转债列表", bonds, 5);
+  } catch (e) {
+    console.error("bondZhCov 失败:", e);
+  }
 
   // 2. 可转债比价表
-  // console.log(SEP + "测试 bondCovComparison() — 可转债比价表");
+  console.log(SEP + "测试 bondCovComparison() — 可转债比价表");
+  try {
+    const comparison = await bondCovComparison();
+    console.log('0', comparison[0])
+    printTable("可转债比价表", comparison);
+  } catch (e) {
+    console.error("bondCovComparison 失败:", e);
+  }
+
+  // // // 3. 可转债详情 (basic)
+  // console.log(SEP + "测试 bondZhCovInfo('127068', 'basic') — 可转债详情");
   // try {
-  //   const comparison = await bondCovComparison();
-  //   printTable("可转债比价表", comparison);
+  //   const info = await bondZhCovInfo("127068", "basic");
+  //   printTable("可转债详情 (basic)", info, 1);
   // } catch (e) {
-  //   console.error("bondCovComparison 失败:", e);
+  //   console.error("bondZhCovInfo 失败:", e);
   // }
 
-  // // 3. 可转债详情 (basic)
-  console.log(SEP + "测试 bondZhCovInfo('127068', 'basic') — 可转债详情");
-  try {
-    const info = await bondZhCovInfo("127068", "basic");
-    printTable("可转债详情 (basic)", info, 1);
-  } catch (e) {
-    console.error("bondZhCovInfo 失败:", e);
-  }
+  // // 4. 可转债价值分析
+  // console.log(SEP + "测试 bondCovValueAnalysis('127068') — 价值分析");
+  // try {
+  //   const analysis = await bondCovValueAnalysis("127068");
+  //   printTable("价值分析", analysis, 5);
+  // } catch (e) {
+  //   console.error("bondCovValueAnalysis 失败:", e);
+  // }
 
-  // 4. 可转债价值分析
-  console.log(SEP + "测试 bondCovValueAnalysis('127068') — 价值分析");
-  try {
-    const analysis = await bondCovValueAnalysis("127068");
-    printTable("价值分析", analysis, 5);
-  } catch (e) {
-    console.error("bondCovValueAnalysis 失败:", e);
-  }
-
-  // 5. 可转债分钟行情 (15分钟K线)
-  console.log(SEP + "测试 bondZhHsCovMin('sz127068', '15') — 分钟行情");
-  try {
-    const minData = await bondZhHsCovMin("sz127068", "15");
-    printTable("15分钟K线", minData, 5);
-  } catch (e) {
-    console.error("bondZhHsCovMin 失败:", e);
-  }
+  // // 5. 可转债分钟行情 (15分钟K线)
+  // console.log(SEP + "测试 bondZhHsCovMin('sz127068', '15') — 分钟行情");
+  // try {
+  //   const minData = await bondZhHsCovMin("sz127068", "15");
+  //   printTable("15分钟K线", minData, 5);
+  // } catch (e) {
+  //   console.error("bondZhHsCovMin 失败:", e);
+  // }
 
   // 6. 可转债盘前分钟行情
-  console.log(SEP + "测试 bondZhHsCovPreMin('sz127068') — 盘前分钟行情");
-  try {
-    const preMin = await bondZhHsCovPreMin("sz127068");
-    printTable("盘前分钟行情", preMin, 5);
-  } catch (e) {
-    console.error("bondZhHsCovPreMin 失败:", e);
-  }
+  // console.log(SEP + "测试 bondZhHsCovPreMin('sz127068') — 盘前分钟行情");
+  // try {
+  //   const preMin = await bondZhHsCovPreMin("sz127068");
+  //   printTable("盘前分钟行情", preMin, 5);
+  // } catch (e) {
+  //   console.error("bondZhHsCovPreMin 失败:", e);
+  // }
 }
 
 main().catch(console.error);

@@ -91,6 +91,7 @@ export async function bondZhCov(
   return bonds.filter((item) => {
     if (!item.listingDate || !item.convertPrice || !item.bondPrice || !item.convertValue)
       return false;
+    if (item.listingDate && new Date(item.listingDate).getTime() > todayStart) return false;
     if (!item.bondCode.startsWith("1")) return false;
     if (item.recordDateSh && todayStart > new Date(item.recordDateSh).getTime() - THREE_DAYS_MS)
       return false;
@@ -168,7 +169,6 @@ export async function bondCovComparison(): Promise<BondCovComparisonRecord[]> {
     dataPath: "data.diff",
     totalPath: "data.total",
   });
-
   return data.map(mapComparisonRecord);
 }
 
@@ -179,20 +179,21 @@ function mapComparisonRecord(raw: Record<string, unknown>): BondCovComparisonRec
     bondName: String(raw.f14 ?? ""),
     bondPrice: toNumeric(raw.f2),
     bondChangeRate: toNumeric(raw.f3),
-    stockCode: String(raw.f234 ?? ""),
-    stockName: String(raw.f236 ?? ""),
-    stockPrice: toNumeric(raw.f231),
-    stockChangeRate: toNumeric(raw.f232),
-    convertPrice: toNumeric(raw.f237),
-    convertValue: toNumeric(raw.f238),
-    convertPremiumRate: toNumeric(raw.f239),
-    bondPremiumRate: toNumeric(raw.f240),
-    resaleTriggerPrice: toNumeric(raw.f241),
-    redeemTriggerPrice: toNumeric(raw.f242),
-    maturityRedeemPrice: toNumeric(raw.f26),
-    pureBondValue: toNumeric(raw.f229),
-    convertStartDate: parseDate(raw.f243),
-    listingDate: parseDate(raw.f227),
+    stockCode: String(raw.f232 ?? ""),
+    stockName: String(raw.f234 ?? ""),
+    pureBondValue: toNumeric(raw.f227),
+    stockPrice: toNumeric(raw.f229),
+    stockChangeRate: toNumeric(raw.f230),
+    convertPrice: toNumeric(raw.f235),
+    convertValue: toNumeric(raw.f236),
+    convertPremiumRate: toNumeric(raw.f237),
+    bondPurePremiumRate: toNumeric(raw.f238),
+    resaleTriggerPrice: toNumeric(raw.f239),
+    redeemTriggerPrice: toNumeric(raw.f240),
+    maturityRedeemPrice: toNumeric(raw.f241),
+    listingDate: parseDate(raw.f26),
+    convertStartDate: parseDate(raw.f242),
+    issueStartDate: parseDate(raw.f243),
     subscribeDate: null,
   };
 }

@@ -4,11 +4,11 @@
  * Corresponds to Python: akshare/bond/bond_cb_ths.py
  */
 import type { BondZhCovInfoThsRecord } from "../types/ths";
+import { THS } from "../urls";
 import { parseDate } from "../utils/date";
 import { fetchJson } from "../utils/http";
 import { toNumeric } from "../utils/numeric";
 
-const THS_URL = "https://data.10jqka.com.cn/ipo/kzz/";
 const THS_HEADERS = {
   "User-Agent":
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.90 Safari/537.36",
@@ -50,7 +50,7 @@ interface ThsRawRecord {
  * ```
  */
 export async function bondZhCovInfoThs(): Promise<BondZhCovInfoThsRecord[]> {
-  const data = await fetchJson<{ list: ThsRawRecord[] }>(THS_URL, {
+  const data = await fetchJson<{ list: ThsRawRecord[] }>(THS.DATA, {
     headers: THS_HEADERS,
   });
 

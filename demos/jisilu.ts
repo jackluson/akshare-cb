@@ -56,12 +56,14 @@ async function main() {
     console.log(SEP + "测试 bondCbJsl() — 可转债列表");
     try {
       const list = await bondCbJsl(cookie);
-      // const bonds = await bondZhCov();
+      const bonds = await bondZhCov(true);
       // const nowStart = new Date().setHours(0, 0, 0, 0); // 求当天时间的开始时间
       // const validBonds = bonds.filter(item => item.listingDate && item.convertPrice && item.bondPrice && item.convertValue && item.bondCode.startsWith('1') && (!item.recordDateSh || nowStart <= new Date(item.recordDateSh).getTime() - 3 * 24 * 60 * 60 * 1000) && (!item.transferEndDate || nowStart <= new Date(item.transferEndDate).getTime() - 3 * 24 * 60 * 60 * 1000));
       // 求不在list中的validBonds
-      // const diff = validBonds.filter(item => !list.some(l => l.bondCode === item.bondCode));
-      // console.log("不在list中的validBonds", diff, diff.length, 'validBonds', validBonds.length, validBonds[2]);
+      const diff = bonds.filter(item => !list.some(l => l.bondCode === item.bondCode));
+      console.log("不在list中的validBonds", diff, diff.length, 'validBonds', bonds.length, bonds[0]);
+      const diff2 = list.filter(item => !bonds.some(l => l.bondCode === item.bondCode));
+      console.log("不在validBonds中的list", diff2, diff2.length, 'list', list.length, list[0]);
       printTable("可转债列表", list, 5);
     } catch (e) {
       console.error("bondCbJsl 失败:", e);

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { bondCovIssueCninfo, bondCovStockIssueCninfo } from "../../src/sources/cninfo.ts";
+import { getCallHeaders, getCallUrl } from "../helpers";
 
 describe("bondCovIssueCninfo", () => {
   const mockFetch = vi.fn();
@@ -131,12 +132,11 @@ describe("bondCovIssueCninfo", () => {
     await bondCovIssueCninfo("20200101", "20201231");
 
     expect(mockFetch).toHaveBeenCalledTimes(1);
-    const fetchOptions = mockFetch.mock.calls[0][1] as RequestInit;
-    const headers = fetchOptions.headers as Record<string, string>;
+    const headers = getCallHeaders(mockFetch);
 
-    expect(headers).toHaveProperty("Accept-Enckey");
-    expect(typeof headers["Accept-Enckey"]).toBe("string");
-    expect(headers["Accept-Enckey"].length).toBeGreaterThan(0);
+    expect(headers).toHaveProperty("accept-enckey");
+    expect(typeof headers["accept-enckey"]).toBe("string");
+    expect(headers["accept-enckey"].length).toBeGreaterThan(0);
   });
 
   it("passes startDate and endDate as sdate and edate params", async () => {
@@ -144,7 +144,7 @@ describe("bondCovIssueCninfo", () => {
 
     await bondCovIssueCninfo("20200101", "20201231");
 
-    const calledUrl = mockFetch.mock.calls[0][0] as string;
+    const calledUrl = getCallUrl(mockFetch);
     expect(calledUrl).toContain("sdate=2020-01-01");
     expect(calledUrl).toContain("edate=2020-12-31");
   });
@@ -280,12 +280,11 @@ describe("bondCovStockIssueCninfo", () => {
     await bondCovStockIssueCninfo();
 
     expect(mockFetch).toHaveBeenCalledTimes(1);
-    const fetchOptions = mockFetch.mock.calls[0][1] as RequestInit;
-    const headers = fetchOptions.headers as Record<string, string>;
+    const headers = getCallHeaders(mockFetch);
 
-    expect(headers).toHaveProperty("Accept-Enckey");
-    expect(typeof headers["Accept-Enckey"]).toBe("string");
-    expect(headers["Accept-Enckey"].length).toBeGreaterThan(0);
+    expect(headers).toHaveProperty("accept-enckey");
+    expect(typeof headers["accept-enckey"]).toBe("string");
+    expect(headers["accept-enckey"].length).toBeGreaterThan(0);
   });
 
   it("calls the correct API endpoint", async () => {
@@ -293,7 +292,7 @@ describe("bondCovStockIssueCninfo", () => {
 
     await bondCovStockIssueCninfo();
 
-    const calledUrl = mockFetch.mock.calls[0][0] as string;
+    const calledUrl = getCallUrl(mockFetch);
     expect(calledUrl).toBe("http://webapi.cninfo.com.cn/api/sysapi/p_sysapi1124");
   });
 

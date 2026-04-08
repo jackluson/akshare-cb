@@ -78,7 +78,7 @@ export interface BondCovComparisonRecord {
   /** 转股溢价率 (%) */
   convertPremiumRate: number | null;
   /** 纯债溢价率 (%) */
-  bondPremiumRate: number | null;
+  bondPurePremiumRate: number | null;
   /** 回售触发价 */
   resaleTriggerPrice: number | null;
   /** 强赎触发价 */
@@ -93,6 +93,8 @@ export interface BondCovComparisonRecord {
   listingDate: string | null;
   /** 申购日期 */
   subscribeDate: string | null;
+  /** 发行起始 */
+  issueStartDate: string | null;
 }
 
 /** bondZhCovInfo indicator 类型 */
