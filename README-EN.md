@@ -58,6 +58,57 @@ pnpm docs
 | **同花顺** (THS)          | `bondZhCovInfoThs`                                                                                               |
 | **巨潮资讯** (cninfo)     | `bondCovIssueCninfo`, `bondCovStockIssueCninfo`                                                                  |
 
+## Global Configuration
+
+Use `configure()` to set global headers, timeout, retry, and hooks before calling any API. Can be called multiple times; each call merges with the previous config.
+
+```typescript
+import { configure, bondZhCov } from 'akshare-cb';
+
+configure({
+  headers: { 'User-Agent': 'my-app/1.0' },
+  timeout: 30_000,
+  retry: { limit: 5 },
+});
+
+const bonds = await bondZhCov();
+```
+
+### Options (`AkshareCbConfig`)
+
+| Option     | Type                         | Description                                |
+| ---------- | ---------------------------- | ------------------------------------------ |
+| `headers`  | `Record<string, string>`     | Custom headers merged with defaults        |
+| `timeout`  | `number`                     | Request timeout in ms, default `60_000`    |
+| `retry`    | `{ limit?: number }`         | Max retries, default `3`                   |
+| `hooks`    | See below                    | ky hooks for request/response interception |
+
+### Hooks Example
+
+```typescript
+import { configure } from 'akshare-cb';
+import UserAgent from 'user-agents';
+
+const ua = new UserAgent();
+
+configure({
+  headers: { 'User-Agent': ua.toString() },
+  hooks: {
+    beforeRequest: [
+      ({ request }) => {
+        console.log(`→ ${request.method} ${request.url}`);
+      },
+    ],
+    afterResponse: [
+      ({ response }) => {
+        console.log(`← ${response.status} ${response.url}`);
+        return response;
+      },
+    ],
+  },
+});
+```
+
 ## Error Handling
 
 All errors extend from `AkshareError` (base class with `message` + `code`).

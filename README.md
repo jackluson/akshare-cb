@@ -58,6 +58,57 @@ pnpm docs
 | **同花顺**   | `bondZhCovInfoThs`                                                                                               |
 | **巨潮资讯** | `bondCovIssueCninfo`, `bondCovStockIssueCninfo`                                                                  |
 
+## 全局配置
+
+使用 `configure()` 在调用业务 API 前统一设置请求头、超时、重试和 hooks。可多次调用，每次合并上一次配置。
+
+```typescript
+import { configure, bondZhCov } from 'akshare-cb';
+
+configure({
+  headers: { 'User-Agent': 'my-app/1.0' },
+  timeout: 30_000,
+  retry: { limit: 5 },
+});
+
+const bonds = await bondZhCov();
+```
+
+### 配置项 (`AkshareCbConfig`)
+
+| 参数       | 类型                         | 说明                                       |
+| ---------- | ---------------------------- | ------------------------------------------ |
+| `headers`  | `Record<string, string>`     | 自定义请求头，与默认头合并                 |
+| `timeout`  | `number`                     | 请求超时时间（毫秒），默认 `60_000`        |
+| `retry`    | `{ limit?: number }`         | 重试次数，默认 `3`                         |
+| `hooks`    | 见下方                       | ky hooks，用于拦截请求/响应                |
+
+### Hooks 示例
+
+```typescript
+import { configure } from 'akshare-cb';
+import UserAgent from 'user-agents';
+
+const ua = new UserAgent();
+
+configure({
+  headers: { 'User-Agent': ua.toString() },
+  hooks: {
+    beforeRequest: [
+      ({ request }) => {
+        console.log(`→ ${request.method} ${request.url}`);
+      },
+    ],
+    afterResponse: [
+      ({ response }) => {
+        console.log(`← ${response.status} ${response.url}`);
+        return response;
+      },
+    ],
+  },
+});
+```
+
 ## 错误处理
 
 所有错误均继承自 `AkshareError`（基类包含 `message` + `code`）。
