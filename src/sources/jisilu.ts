@@ -15,12 +15,13 @@ import { parseDate } from "../utils/date";
 import { parseHtmlTableAsRecords } from "../utils/html-table";
 import { fetchText } from "../utils/http";
 import { lenientJsonParse } from "../utils/lenient-json";
+import { JISILU } from "../urls";
 import { toNumeric } from "../utils/numeric";
 
-const INDEX_URL = "https://www.jisilu.cn/webapi/cb/index_history/";
-const CB_LIST_URL = "https://www.jisilu.cn/data/cbnew/cb_list_new/";
-const REDEEM_URL = "https://www.jisilu.cn/data/cbnew/redeem_list/";
-const ADJ_LOGS_URL = "https://www.jisilu.cn/data/cbnew/adj_logs/";
+const INDEX_URL = JISILU.INDEX;
+const CB_LIST_URL = JISILU.CB_LIST;
+const REDEEM_URL = JISILU.REDEEM;
+const ADJ_LOGS_URL = JISILU.ADJ_LOGS;
 
 const REDEEM_ICON_MAP: Record<string, RedeemStatus> = {
   R: "已公告强赎",

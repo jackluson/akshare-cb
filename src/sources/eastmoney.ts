@@ -10,12 +10,13 @@ import type {
   BondCovValueAnalysisRecord,
   BondZhCovRecord,
 } from "../types/eastmoney";
+import { EASTMONEY } from "../urls";
 import { parseDate } from "../utils/date";
 import { fetchJson } from "../utils/http";
 import { toNumeric } from "../utils/numeric";
 import { fetchPaginatedData } from "../utils/pagination";
 
-const DATACENTER_URL = "https://datacenter-web.eastmoney.com/api/data/v1/get";
+const DATACENTER_URL = EASTMONEY.DATACENTER;
 
 const BOND_QUOTE_COLUMNS =
   "f2~01~CONVERT_STOCK_CODE~CONVERT_STOCK_PRICE," +
@@ -91,7 +92,7 @@ export async function bondZhCov(
   return bonds.filter((item) => {
     if (!item.listingDate || !item.convertPrice || !item.bondPrice || !item.convertValue)
       return false;
-    if (item.listingDate && new Date(item.listingDate).getTime() > todayStart) return false;
+    if (item.listingDate && new Date(item.listingDate).setHours(0, 0, 0, 0) > todayStart) return false;
     if (!item.bondCode.startsWith("1")) return false;
     if (item.recordDateSh && todayStart > new Date(item.recordDateSh).getTime() - THREE_DAYS_MS)
       return false;
@@ -149,7 +150,7 @@ function mapBondZhCovRecord(raw: Record<string, unknown>): BondZhCovRecord {
  * ```
  */
 export async function bondCovComparison(): Promise<BondCovComparisonRecord[]> {
-  const url = "https://16.push2.eastmoney.com/api/qt/clist/get";
+  const url = EASTMONEY.PUSH_CLIST;
   const params = {
     pn: "1",
     pz: "100",
@@ -275,7 +276,7 @@ export async function bondZhCovInfo(
  * ```
  */
 export async function bondCovValueAnalysis(symbol: string): Promise<BondCovValueAnalysisRecord[]> {
-  const url = "https://datacenter-web.eastmoney.com/api/data/get";
+  const url = EASTMONEY.DATA_GET;
   const params = {
     sty: "ALL",
     token: "894050c76af8597a853f5b408b759f5d",
@@ -356,7 +357,7 @@ export async function bondZhHsCovMin(
 }
 
 async function fetchMinTrends(secid: string, iscr: string): Promise<BondCovMinRecord[]> {
-  const url = "https://push2.eastmoney.com/api/qt/stock/trends2/get";
+  const url = EASTMONEY.STOCK_TRENDS;
   const params = {
     secid,
     fields1: "f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f11,f12,f13",
@@ -394,7 +395,7 @@ async function fetchMinKline(
   startDate: string,
   endDate: string,
 ): Promise<BondCovMinRecord[]> {
-  const url = "https://push2his.eastmoney.com/api/qt/stock/kline/get";
+  const url = EASTMONEY.STOCK_KLINE;
   const adjustMap: Record<string, string> = { "": "0", qfq: "1", hfq: "2" };
 
   const params = {
