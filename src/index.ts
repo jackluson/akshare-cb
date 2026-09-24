@@ -53,6 +53,7 @@ export type {
   BondCovInfoIndicator,
   BondCovMinRecord,
   BondCovValueAnalysisRecord,
+  BondZhCovOptions,
   BondZhCovRecord,
 } from "./types/eastmoney";
 export type {

@@ -28,6 +28,7 @@
 - [BondCovStockIssueCninfoRecord](interfaces/BondCovStockIssueCninfoRecord.md)
 - [BondCovValueAnalysisRecord](interfaces/BondCovValueAnalysisRecord.md)
 - [BondZhCovInfoThsRecord](interfaces/BondZhCovInfoThsRecord.md)
+- [BondZhCovOptions](interfaces/BondZhCovOptions.md)
 - [BondZhCovRecord](interfaces/BondZhCovRecord.md)
 
 ## Type Aliases

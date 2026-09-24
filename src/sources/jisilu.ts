@@ -11,11 +11,11 @@ import type {
   BondCbRedeemJslRecord,
   RedeemStatus,
 } from "../types/jisilu";
+import { JISILU } from "../urls";
 import { parseDate } from "../utils/date";
 import { parseHtmlTableAsRecords } from "../utils/html-table";
 import { fetchText } from "../utils/http";
 import { lenientJsonParse } from "../utils/lenient-json";
-import { JISILU } from "../urls";
 import { toNumeric } from "../utils/numeric";
 
 const INDEX_URL = JISILU.INDEX;

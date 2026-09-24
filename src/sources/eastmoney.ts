@@ -3,11 +3,13 @@
  * Data source: https://data.eastmoney.com/kzz/default.html
  * Corresponds to Python: akshare/bond/bond_zh_cov.py
  */
+import { ValidationError } from "../errors";
 import type {
   BondCovComparisonRecord,
   BondCovInfoIndicator,
   BondCovMinRecord,
   BondCovValueAnalysisRecord,
+  BondZhCovOptions,
   BondZhCovRecord,
 } from "../types/eastmoney";
 import { EASTMONEY } from "../urls";
@@ -29,7 +31,11 @@ const BOND_QUOTE_COLUMNS =
  * 东方财富-可转债列表
  * Returns the full list of convertible bonds from East Money Data Center.
  *
- * @returns Array of {@link BondZhCovRecord} with 19 fields per record
+ * @param isSurviveOrOptions Legacy survival flag, or {@link BondZhCovOptions}.
+ * @param delay Legacy pagination delay in milliseconds (boolean form only).
+ * @returns Normalized records. Fetches all pages unless options.pageNumber is specified.
+ * Requests ALL columns and the eight quote fields with quoteType=0; no JSONP callback is needed.
+ * @throws {@link ValidationError} on invalid pagination, delay, or sorting options
  * @throws {@link NetworkError} on HTTP failures
  * @throws {@link ParseError} on JSON parse failures
  * @category 东方财富
@@ -38,25 +44,53 @@ const BOND_QUOTE_COLUMNS =
  * ```typescript
  * const bonds = await bondZhCov();
  * console.log(bonds[0].bondCode); // "127100"
+ * const page = await bondZhCov({ pageSize: 50, pageNumber: 2 });
+ * const surviving = await bondZhCov(true, 500); // Existing calls remain supported.
  * ```
  */
 export async function bondZhCov(
-  isSurvive: boolean = false,
+  isSurviveOrOptions: boolean | BondZhCovOptions = false,
   delay?: number,
 ): Promise<BondZhCovRecord[]> {
+  const options =
+    typeof isSurviveOrOptions === "boolean"
+      ? { isSurvive: isSurviveOrOptions, delay }
+      : isSurviveOrOptions;
+  const { isSurvive = false, pageSize = 500, pageNumber } = options;
+  const sortColumns = options.sortColumns ?? "PUBLIC_START_DATE,SECURITY_CODE";
+  const sortTypes = options.sortTypes ?? "-1,-1";
+  for (const [field, value] of Object.entries({ pageSize, pageNumber })) {
+    if (value !== undefined && (!Number.isSafeInteger(value) || value < 1)) {
+      throw new ValidationError(`${field} must be a positive integer`, field);
+    }
+  }
+  if (options.delay !== undefined && (!Number.isFinite(options.delay) || options.delay < 0)) {
+    throw new ValidationError("delay must be a non-negative finite number", "delay");
+  }
+  if (sortColumns.split(",").some((column) => !column.trim())) {
+    throw new ValidationError("sortColumns must contain non-empty field names", "sortColumns");
+  }
+  if (
+    sortTypes.split(",").length !== sortColumns.split(",").length ||
+    sortTypes.split(",").some((order) => order !== "-1" && order !== "1")
+  ) {
+    throw new ValidationError("sortTypes must specify -1 or 1 for each sort column", "sortTypes");
+  }
   const params = {
-    sortColumns: "PUBLIC_START_DATE",
-    sortTypes: "-1",
-    pageSize: "500",
-    pageNumber: "1",
+    sortColumns,
+    sortTypes,
+    pageSize: String(pageSize),
+    pageNumber: String(pageNumber ?? 1),
     reportName: "RPT_BOND_CB_LIST",
     columns: "ALL",
     quoteColumns: BOND_QUOTE_COLUMNS,
+    quoteType: "0",
+    ...(options.filter !== undefined ? { filter: options.filter } : {}),
     source: "WEB",
     client: "WEB",
   };
 
-  // Fetch page 1 to get total pages
+  // Fetch the requested page, or page 1 to discover the total page count.
   const firstPage = await fetchJson<Record<string, unknown>>(DATACENTER_URL, {
     params,
   });
@@ -64,14 +98,14 @@ export async function bondZhCov(
   const result = firstPage.result as Record<string, unknown> | undefined;
   if (!result) return [];
 
-  const totalPages = Number(result.pages ?? 1);
+  const totalPages = pageNumber === undefined ? Number(result.pages ?? 1) : 1;
   const allData: Record<string, unknown>[] = [
     ...((result.data as Record<string, unknown>[]) ?? []),
   ];
 
   // Fetch remaining pages
   for (let page = 2; page <= totalPages; page++) {
-    const currentDelay = delay ?? 500 + Math.random() * 1000;
+    const currentDelay = options.delay ?? 500 + Math.random() * 1000;
     await new Promise((r) => setTimeout(r, currentDelay));
 
     const pageData = await fetchJson<Record<string, unknown>>(DATACENTER_URL, {
@@ -92,7 +126,8 @@ export async function bondZhCov(
   return bonds.filter((item) => {
     if (!item.listingDate || !item.convertPrice || !item.bondPrice || !item.convertValue)
       return false;
-    if (item.listingDate && new Date(item.listingDate).setHours(0, 0, 0, 0) > todayStart) return false;
+    if (item.listingDate && new Date(item.listingDate).setHours(0, 0, 0, 0) > todayStart)
+      return false;
     if (!item.bondCode.startsWith("1")) return false;
     if (item.recordDateSh && todayStart > new Date(item.recordDateSh).getTime() - THREE_DAYS_MS)
       return false;
@@ -105,25 +140,30 @@ export async function bondZhCov(
   });
 }
 
+function nullableBondString(value: unknown): string | null {
+  if (value == null || value === "" || value === "-") return null;
+  return String(value);
+}
+
 function mapBondZhCovRecord(raw: Record<string, unknown>): BondZhCovRecord {
   return {
     bondCode: String(raw.SECURITY_CODE ?? ""),
     bondName: String(raw.SECURITY_NAME_ABBR ?? ""),
     subscribeDate: parseDate(raw.PUBLIC_START_DATE),
-    subscribeCode: String(raw.APPLY_CODE ?? ""),
-    subscribeLimit: toNumeric(raw.SUBSCRIPTION_LIMIT),
+    subscribeCode: String(raw.CORRECODE ?? raw.APPLY_CODE ?? ""),
+    subscribeLimit: toNumeric(raw.ONLINE_GENERAL_AAU ?? raw.SUBSCRIPTION_LIMIT),
     stockCode: String(raw.CONVERT_STOCK_CODE ?? ""),
-    stockName: String(raw.CONVERT_STOCK_NAME ?? ""),
+    stockName: String(raw.SECURITY_SHORT_NAME ?? raw.CONVERT_STOCK_NAME ?? ""),
     stockPrice: toNumeric(raw.CONVERT_STOCK_PRICE),
     convertPrice: toNumeric(raw.TRANSFER_PRICE),
     convertValue: toNumeric(raw.TRANSFER_VALUE),
     bondPrice: toNumeric(raw.CURRENT_BOND_PRICE) ?? 100,
     convertPremiumRate: toNumeric(raw.TRANSFER_PREMIUM_RATIO),
-    allotmentDate: parseDate(raw.ALLOTMENT_DATE),
-    allotmentPerShare: toNumeric(raw.ALLOTMENT_PER_SHARE),
-    issueSize: toNumeric(raw.ISSUE_SIZE),
-    ballotDate: parseDate(raw.WINNING_NUMBER_PUBLISH_DATE),
-    winRate: toNumeric(raw.WIN_RATE),
+    allotmentDate: parseDate(raw.SECURITY_START_DATE ?? raw.ALLOTMENT_DATE),
+    allotmentPerShare: toNumeric(raw.FIRST_PER_PREPLACING ?? raw.ALLOTMENT_PER_SHARE),
+    issueSize: toNumeric(raw.ACTUAL_ISSUE_SCALE ?? raw.ISSUE_SIZE),
+    ballotDate: parseDate(raw.BOND_START_DATE ?? raw.WINNING_NUMBER_PUBLISH_DATE),
+    winRate: toNumeric(raw.ONLINE_GENERAL_LWR ?? raw.WIN_RATE),
     listingDate: parseDate(raw.LISTING_DATE),
     creditRating: String(raw.RATING ?? ""),
     delistDate: parseDate(raw.DELIST_DATE),
@@ -131,6 +171,54 @@ function mapBondZhCovRecord(raw: Record<string, unknown>): BondZhCovRecord {
     ceaseDate: parseDate(raw.CEASE_DATE),
     recordDateSh: parseDate(raw.RECORD_DATE_SH),
     transferEndDate: parseDate(raw.TRANSFER_END_DATE),
+    securityId: nullableBondString(raw.SECUCODE),
+    tradeMarket: nullableBondString(raw.TRADE_MARKET),
+    bondDuration: toNumeric(raw.BOND_EXPIRE),
+    valueDate: parseDate(raw.VALUE_DATE),
+    issueYear: nullableBondString(raw.ISSUE_YEAR),
+    payInterestDay: nullableBondString(raw.PAY_INTEREST_DAY),
+    interestRateExplain: nullableBondString(raw.INTEREST_RATE_EXPLAIN),
+    bondCombineCode: nullableBondString(raw.BOND_COMBINE_CODE),
+    issuePrice: toNumeric(raw.ISSUE_PRICE),
+    remark: nullableBondString(raw.REMARK),
+    parValue: toNumeric(raw.PAR_VALUE),
+    issueObject: nullableBondString(raw.ISSUE_OBJECT),
+    redeemType: nullableBondString(raw.REDEEM_TYPE),
+    resaleExecuteReason: nullableBondString(raw.EXECUTE_REASON_HS),
+    resaleNoticeDate: parseDate(raw.NOTICE_DATE_HS),
+    redeemNoticeDate: parseDate(raw.NOTICE_DATE_SH),
+    resaleExecutePrice: toNumeric(raw.EXECUTE_PRICE_HS),
+    redeemExecutePrice: toNumeric(raw.EXECUTE_PRICE_SH),
+    redeemStartDate: parseDate(raw.EXECUTE_START_DATESH),
+    resaleStartDate: parseDate(raw.EXECUTE_START_DATEHS),
+    executeEndDate: parseDate(raw.EXECUTE_END_DATE),
+    subscribeName: nullableBondString(raw.CORRECODE_NAME_ABBR),
+    allotmentCode: nullableBondString(raw.CORRECODEO),
+    allotmentName: nullableBondString(raw.CORRECODE_NAME_ABBRO),
+    initialConvertPrice: toNumeric(raw.INITIAL_TRANSFER_PRICE),
+    convertStartDate: parseDate(raw.TRANSFER_START_DATE),
+    resaleClause: nullableBondString(raw.RESALE_CLAUSE),
+    redeemClause: nullableBondString(raw.REDEEM_CLAUSE),
+    ratingAgency: nullableBondString(raw.PARTY_NAME),
+    stockPriceHq: toNumeric(raw.CONVERT_STOCK_PRICEHQ),
+    market: nullableBondString(raw.MARKET),
+    resaleTriggerPrice: toNumeric(raw.RESALE_TRIG_PRICE),
+    redeemTriggerPrice: toNumeric(raw.REDEEM_TRIG_PRICE),
+    pbRatio: toNumeric(raw.PBV_RATIO),
+    interestBeginDate: parseDate(raw.IB_START_DATE),
+    interestEndDate: parseDate(raw.IB_END_DATE),
+    cashflowDate: parseDate(raw.CASHFLOW_DATE),
+    couponRate: toNumeric(raw.COUPON_IR),
+    issueTypeName: nullableBondString(raw.PARAM_NAME),
+    issueType: nullableBondString(raw.ISSUE_TYPE),
+    redeemExecuteReason: nullableBondString(raw.EXECUTE_REASON_SH),
+    paydayNew: nullableBondString(raw.PAYDAYNEW),
+    bondPriceNew: toNumeric(raw.CURRENT_BOND_PRICENEW),
+    isConvertStock: nullableBondString(raw.IS_CONVERT_STOCK),
+    isRedeem: nullableBondString(raw.IS_REDEEM),
+    isSellback: nullableBondString(raw.IS_SELLBACK),
+    firstProfit: toNumeric(raw.FIRST_PROFIT),
+    subscribeDateTime: nullableBondString(raw.PUBLIC_START_DATE_HOURS),
   };
 }
 

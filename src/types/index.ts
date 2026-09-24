@@ -6,6 +6,7 @@ export type {
   BondCovComparisonRecord,
   BondCovMinRecord,
   BondCovValueAnalysisRecord,
+  BondZhCovOptions,
   BondZhCovRecord,
 } from "./eastmoney";
 

@@ -42,7 +42,7 @@ Full API documentation with parameter details, return types, and examples is aut
 To generate the docs locally:
 
 ```bash
-pnpm docs
+pnpm run docs
 # Then view the Markdown files under docs/
 ```
 
@@ -57,6 +57,33 @@ pnpm docs
 | **集思录** (Jisilu)       | `bondCbIndexJsl`, `bondCbJsl`, `bondCbRedeemJsl`, `bondCbAdjLogsJsl`                                             |
 | **同花顺** (THS)          | `bondZhCovInfoThs`                                                                                               |
 | **巨潮资讯** (cninfo)     | `bondCovIssueCninfo`, `bondCovStockIssueCninfo`                                                                  |
+
+## Convertible bond list options (`bondZhCov`)
+
+```typescript
+// Fetch only page 2, matching the supplied curl request
+const page = await bondZhCov({ pageSize: 50, pageNumber: 2 });
+// Omit pageNumber to fetch every page
+const bonds = await bondZhCov({ isSurvive: true, pageSize: 500, delay: 500 });
+// Legacy calls remain supported
+const surviving = await bondZhCov(true, 500);
+```
+
+| Option | Default | Description |
+| --- | --- | --- |
+| `isSurvive` | `false` | Apply existing survival filters; scoped to the selected page if specified |
+| `delay` | Random 500–1500 | Delay between pages in milliseconds |
+| `pageSize` | `500` | Positive integer page size |
+| `pageNumber` | Omitted | Fetch only this page when specified; otherwise fetch all pages from page 1 |
+| `sortColumns` | `PUBLIC_START_DATE,SECURITY_CODE` | Comma-separated East Money sort fields |
+| `sortTypes` | `-1,-1` | One direction per field: `-1` descending, `1` ascending |
+| `filter` | Omitted | Native filter expression, e.g. `(SECURITY_CODE="113702")` |
+
+Requests use `RPT_BOND_CB_LIST`, `columns=ALL`, all eight quote columns, `quoteType=0`, and `source=client=WEB`. JSONP callbacks and browser cookies are unnecessary.
+
+`BondZhCovRecord` now exposes 72 fields; see the [field reference](docs/interfaces/BondZhCovRecord.md). Additions include resale/redemption trigger prices, PB ratio, coupon rate, conversion start date, terms, and execution details. Existing subscription, stock name, issue size, allotment and ballot fields now map to the actual upstream names, with legacy aliases retained.
+
+`subscribeLimit` preserves `ONLINE_GENERAL_AAU` in **thousand CNY** (divide by 10 for the website's ten-thousand-CNY display). `recordDateSh` is the **redemption record date**. Missing new fields return `null`; dates use `YYYY-MM-DD`, while `subscribeDateTime` preserves the upstream date and time. Source flags `isRedeem` / `isSellback` do not indicate current redemption/resale status. Missing `bondPrice` retains the legacy fallback of `100`.
 
 ## Global Configuration
 
@@ -174,7 +201,7 @@ pnpm run typecheck
 pnpm run lint
 
 # Generate API docs
-pnpm docs
+pnpm run docs
 
 # Run all checks
 pnpm run check

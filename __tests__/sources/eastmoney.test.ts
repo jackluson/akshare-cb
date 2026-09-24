@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import bondListFixture from "../../__fixtures__/eastmoney-bond-list.json";
 import {
   bondCovComparison,
   bondCovValueAnalysis,
@@ -16,11 +17,214 @@ describe("bondZhCov", () => {
   const mockFetch = vi.fn();
 
   beforeEach(() => {
+    mockFetch.mockReset();
     vi.stubGlobal("fetch", mockFetch);
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  it("matches the curl parameters and fetches only the requested page", async () => {
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse({ result: { pages: 22, data: [bondListFixture] } }),
+    );
+    const records = await bondZhCov({ pageNumber: 2, pageSize: 50 });
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    const request = mockFetch.mock.calls[0][0] as Request;
+    const params = new URL(request.url).searchParams;
+    expect(Object.fromEntries(params)).toMatchObject({
+      pageNumber: "2",
+      pageSize: "50",
+      sortColumns: "PUBLIC_START_DATE,SECURITY_CODE",
+      sortTypes: "-1,-1",
+      reportName: "RPT_BOND_CB_LIST",
+      columns: "ALL",
+      quoteType: "0",
+      source: "WEB",
+      client: "WEB",
+    });
+    expect(params.get("quoteColumns")?.split(",")).toEqual([
+      "f2~01~CONVERT_STOCK_CODE~CONVERT_STOCK_PRICE",
+      "f235~10~SECURITY_CODE~TRANSFER_PRICE",
+      "f236~10~SECURITY_CODE~TRANSFER_VALUE",
+      "f2~10~SECURITY_CODE~CURRENT_BOND_PRICE",
+      "f237~10~SECURITY_CODE~TRANSFER_PREMIUM_RATIO",
+      "f239~10~SECURITY_CODE~RESALE_TRIG_PRICE",
+      "f240~10~SECURITY_CODE~REDEEM_TRIG_PRICE",
+      "f23~01~CONVERT_STOCK_CODE~PBV_RATIO",
+    ]);
+    expect(params.has("callback")).toBe(false);
+    expect(records[0]).toMatchObject({
+      bondCode: "113702",
+      subscribeCode: "754290",
+      subscribeLimit: 1000,
+      stockName: "斯达半导",
+      allotmentDate: "2026-04-15",
+      allotmentPerShare: 6.263,
+      issueSize: 15,
+      ballotDate: "2026-04-20",
+      winRate: 0.0034223,
+      securityId: "113702.SH",
+      tradeMarket: "CNSESH",
+      bondDuration: 6,
+      valueDate: "2026-04-16",
+      issueYear: "2026",
+      payInterestDay: "04-16",
+      issuePrice: 100,
+      parValue: 100,
+      subscribeName: "斯达发债",
+      allotmentCode: "753290",
+      allotmentName: "斯达配债",
+      initialConvertPrice: 105.3,
+      convertStartDate: "2026-10-22",
+      resaleTriggerPrice: 73.35,
+      redeemTriggerPrice: 136.23,
+      pbRatio: 2.99,
+      couponRate: 0.1,
+      cashflowDate: "2027-04-16",
+      interestBeginDate: "2026-04-16",
+      interestEndDate: "2027-04-15",
+      issueType: "1,4",
+      paydayNew: "-16",
+      isConvertStock: "否",
+      isRedeem: "是",
+      isSellback: "是",
+      subscribeDateTime: "2026-04-16 15:00:00",
+      redeemStartDate: null,
+      resaleStartDate: null,
+    });
+    expect(records[0].resaleClause).toBe(bondListFixture.RESALE_CLAUSE);
+    expect(records[0].redeemClause).toBe(bondListFixture.REDEEM_CLAUSE);
+    expect(Object.keys(records[0])).toHaveLength(Object.keys(bondListFixture).length);
+  });
+
+  it("keeps sorting and filters when fetching all pages", async () => {
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse({ result: { pages: 2, data: [{ SECURITY_CODE: "113702" }] } }),
+    );
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse({ result: { pages: 2, data: [{ SECURITY_CODE: "123266" }] } }),
+    );
+    const records = await bondZhCov({
+      pageSize: 1,
+      delay: 0,
+      sortColumns: "SECURITY_CODE",
+      sortTypes: "1",
+      filter: '(RATING="AAA")',
+    });
+    expect(records.map((record) => record.bondCode)).toEqual(["113702", "123266"]);
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+    for (const [index, [request]] of mockFetch.mock.calls.entries()) {
+      expect(Object.fromEntries(new URL((request as Request).url).searchParams)).toMatchObject({
+        pageSize: "1",
+        pageNumber: String(index + 1),
+        sortColumns: "SECURITY_CODE",
+        sortTypes: "1",
+        filter: '(RATING="AAA")',
+        quoteType: "0",
+      });
+    }
+  });
+
+  it("preserves legacy survival filtering and delay arguments", async () => {
+    const live = {
+      SECURITY_CODE: "113702",
+      LISTING_DATE: "2020-01-01",
+      TRANSFER_PRICE: 10,
+      TRANSFER_VALUE: 100,
+      CURRENT_BOND_PRICE: 120,
+    };
+    mockFetch.mockResolvedValueOnce(jsonResponse({ result: { pages: 2, data: [live] } }));
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse({
+        result: {
+          pages: 2,
+          data: [{ ...live, SECURITY_CODE: "123266", RECORD_DATE_SH: "2020-01-01" }],
+        },
+      }),
+    );
+    const records = await bondZhCov(true, 0);
+    expect(records.map((record) => record.bondCode)).toEqual(["113702"]);
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+    expect(new URL((mockFetch.mock.calls[0][0] as Request).url).searchParams.get("pageSize")).toBe(
+      "500",
+    );
+  });
+
+  it("uses the current source fields first and preserves zero values", async () => {
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse({
+        result: {
+          pages: 1,
+          data: [
+            {
+              ONLINE_GENERAL_AAU: 0,
+              SUBSCRIPTION_LIMIT: 99,
+              ACTUAL_ISSUE_SCALE: 0,
+              ISSUE_SIZE: 99,
+              ONLINE_GENERAL_LWR: 0,
+              WIN_RATE: 99,
+              FIRST_PER_PREPLACING: 0,
+              ALLOTMENT_PER_SHARE: 99,
+              RESALE_TRIG_PRICE: "0",
+              REDEEM_TRIG_PRICE: "-",
+              PBV_RATIO: "1.23",
+              COUPON_IR: "0.1%",
+              NOTICE_DATE_SH: "2026-09-01 00:00:00",
+              EXECUTE_PRICE_SH: "100.05",
+              EXECUTE_REASON_SH: "6",
+              RECORD_DATE_SH: "2026-09-25 00:00:00",
+              EXECUTE_START_DATESH: "2026-09-26 00:00:00",
+              NOTICE_DATE_HS: "2026-08-01 00:00:00",
+              EXECUTE_PRICE_HS: "100.06",
+              EXECUTE_REASON_HS: "3",
+              EXECUTE_START_DATEHS: "2026-08-10 00:00:00",
+              EXECUTE_END_DATE: "2026-08-15 00:00:00",
+            },
+          ],
+        },
+      }),
+    );
+    const [record] = await bondZhCov();
+    expect(record).toMatchObject({
+      subscribeLimit: 0,
+      issueSize: 0,
+      winRate: 0,
+      allotmentPerShare: 0,
+      resaleTriggerPrice: 0,
+      redeemTriggerPrice: null,
+      pbRatio: 1.23,
+      couponRate: 0.1,
+      redeemNoticeDate: "2026-09-01",
+      redeemExecutePrice: 100.05,
+      redeemExecuteReason: "6",
+      recordDateSh: "2026-09-25",
+      redeemStartDate: "2026-09-26",
+      resaleNoticeDate: "2026-08-01",
+      resaleExecutePrice: 100.06,
+      resaleExecuteReason: "3",
+      resaleStartDate: "2026-08-10",
+      executeEndDate: "2026-08-15",
+      interestRateExplain: null,
+      subscribeDateTime: null,
+      isRedeem: null,
+    });
+  });
+
+  it.each([
+    { pageSize: 0 },
+    { pageNumber: -1 },
+    { pageNumber: 1.5 },
+    { pageSize: Number.NaN },
+    { delay: -1 },
+    { delay: Number.POSITIVE_INFINITY },
+    { sortColumns: "" },
+    { sortTypes: "1" },
+    { sortTypes: "0,0" },
+  ])("rejects invalid query options %j before making a request", async (options) => {
+    await expect(bondZhCov(options)).rejects.toMatchObject({ name: "ValidationError" });
+    expect(mockFetch).not.toHaveBeenCalled();
   });
 
   it("returns records from paginated response (mock first page with pages: 1)", async () => {
